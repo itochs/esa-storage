@@ -18,6 +18,7 @@ esaにある自分の記事をまとめる
      ```
 
      - 下書き（wip）も含めます。除外したいときは `--no-wip`。
+     - `responce/.last_sync_date` があれば `updated:>=` クエリで差分取得し、最新の `updated_at` 日付を更新します。
    - 保存: 未保存の記事だけ Markdown と画像を出力
 
      ```bash
@@ -26,7 +27,7 @@ esaにある自分の記事をまとめる
      # uv を使う場合: uv run -m esa_exporter.cli save
      ```
 
-     - Markdown は `posts/<カテゴリ>/<タイトル>.md`、画像は `images/` に保存し、Markdown 内リンクをローカル参照に書き換えます。
+     - Markdown は `posts/<カテゴリ>/<number>_<タイトル>.md`、画像は `images/` に保存し、Markdown 内リンクをローカル参照に書き換えます。
      - すでにローカルに同じ `number` かつ同じ `updated_at` がある記事はスキップ（差分のみ保存）。
    - 保存先を変えたい場合は `--posts-dir` / `--images-dir` / `--responses-dir` を指定してください。
 

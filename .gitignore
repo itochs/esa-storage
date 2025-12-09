@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 responce/*.json
 posts/**/*.md
 __pycache__
+.last_sync_date

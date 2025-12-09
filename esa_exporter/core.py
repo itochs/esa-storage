@@ -13,6 +13,7 @@ DEFAULT_USER = "ito_hal"
 POSTS_ROOT = Path(__file__).resolve().parent.parent / "posts"
 IMAGES_ROOT = Path(__file__).resolve().parent.parent / "images"
 RESPONCE_ROOT = Path(__file__).resolve().parent.parent / "responce"
+LAST_SYNC_FILE = RESPONCE_ROOT / ".last_sync_date"
 TOKEN_ENV_NAMES = ("ESA_ACCESS_TOKEN", "ESA_TOKEN", "ESA_API_TOKEN")
 
 
@@ -49,18 +50,30 @@ def load_token(env_path: Path) -> str:
     )
 
 
+def build_queries(
+    screen_name: str, include_wip: bool, updated_after: Optional[str]
+) -> List[str]:
+    updated_clause = f" updated:>={updated_after}" if updated_after else ""
+    queries = [f"user:{screen_name}{updated_clause}"]
+    if include_wip:
+        queries.append(f"wip:true user:{screen_name}{updated_clause}")
+    return queries
+
+
 def fetch_posts(
     session: requests.Session,
     team: str,
     screen_name: str,
     include_wip: bool = True,
+    updated_after: Optional[str] = None,
     responses_dir: Path = RESPONCE_ROOT,
-) -> None:
+) -> List[Dict]:
     responses_dir.mkdir(parents=True, exist_ok=True)
     base_url = f"https://api.esa.io/v1/teams/{team}/posts"
-    queries = [f"user:{screen_name}"]
-    if include_wip:
-        queries.append(f"wip:true user:{screen_name}")
+    queries = build_queries(screen_name, include_wip, updated_after)
+
+    posts: List[Dict] = []
+    seen_ids = set()
 
     for idx, q in enumerate(queries, start=1):
         page = 1
@@ -72,18 +85,24 @@ def fetch_posts(
             (responses_dir / f"esa_page_{idx}_{page}.json").write_text(
                 json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
             )
+            for post in payload.get("posts", []):
+                number = post.get("number")
+                if number in seen_ids:
+                    continue
+                seen_ids.add(number)
+                posts.append(post)
             next_page = payload.get("next_page")
             if not next_page:
                 break
             page = next_page
             time.sleep(8)
+    return posts
 
 
 def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]:
-    posts: List[Dict] = []
-    seen_ids = set()
+    posts_by_number: Dict[int, Dict] = {}
     if not responses_dir.exists():
-        return posts
+        return []
 
     for path in sorted(responses_dir.glob("esa_page_*.json")):
         try:
@@ -92,23 +111,32 @@ def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]
             continue
         for post in payload.get("posts", []):
             number = post.get("number")
-            if number in seen_ids:
+            if number is None:
                 continue
-            seen_ids.add(number)
-            posts.append(post)
-    return posts
+            existing = posts_by_number.get(number)
+            if existing:
+                prev_updated = existing.get("updated_at") or ""
+                new_updated = post.get("updated_at") or ""
+                if new_updated > prev_updated:
+                    posts_by_number[number] = post
+            else:
+                posts_by_number[number] = post
+    return list(posts_by_number.values())
 
 
 def ensure_post_path(
     posts_root: Path, category: Optional[str], title: str, number: int
 ) -> Path:
-    """Return a stable path for the post. If it exists, we overwrite."""
+    """Return a stable path for the post. If it exists, we overwrite.
+
+    File name is anchored by post number to avoid duplicates when the title changes.
+    """
     parts = [p for p in (category or "").split("/") if p]
     target_dir = posts_root.joinpath(*parts)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     base_name = sanitize_filename(title) or f"post-{number}"
-    filename = f"{base_name}.md"
+    filename = f"{number}_{base_name}.md"
     return target_dir / filename
 
 
@@ -217,3 +245,17 @@ def load_local_index(posts_root: Path) -> Dict[int, str]:
         index[num] = updated
 
     return index
+
+
+def load_last_sync_date(path: Path = LAST_SYNC_FILE) -> Optional[str]:
+    if not path.exists():
+        return None
+    try:
+        return path.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def save_last_sync_date(date_str: str, path: Path = LAST_SYNC_FILE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(date_str, encoding="utf-8")

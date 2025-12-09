@@ -8,7 +8,10 @@ from esa_exporter.core import (
     DEFAULT_USER,
     RESPONCE_ROOT,
     fetch_posts,
+    load_posts_from_responses,
     load_token,
+    load_last_sync_date,
+    save_last_sync_date,
 )
 
 
@@ -16,13 +19,24 @@ def run(args: argparse.Namespace) -> None:
     token = load_token(args.env_file)
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {token}"})
+    sync_marker = args.responses_dir / ".last_sync_date"
+    last_sync = load_last_sync_date(sync_marker)
+    print(f"Last sync date: {last_sync or 'none'}")
     fetch_posts(
         session,
         args.team,
         args.screen_name,
         include_wip=not args.no_wip,
+        updated_after=last_sync,
         responses_dir=args.responses_dir,
     )
+    posts = load_posts_from_responses(args.responses_dir)
+    if posts:
+        latest_updated = max((p.get("updated_at") or "") for p in posts)
+        if latest_updated:
+            date_part = latest_updated[:10]
+            save_last_sync_date(date_part, sync_marker)
+            print(f"Updated last sync date to {date_part}")
     print(f"Saved responses to {args.responses_dir}")
 
 
