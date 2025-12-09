@@ -13,6 +13,7 @@ DEFAULT_TEAM = "vdslab"
 DEFAULT_USER = "ito_hal"
 POSTS_ROOT = Path(__file__).parent / "posts"
 IMAGES_ROOT = Path(__file__).parent / "images"
+RESPONCE_ROOT = Path(__file__).parent / "responce"
 TOKEN_ENV_NAMES = ("ESA_ACCESS_TOKEN", "ESA_TOKEN", "ESA_API_TOKEN")
 
 
@@ -51,8 +52,13 @@ def load_token(env_path: Path) -> str:
 
 
 def fetch_posts(
-    session: requests.Session, team: str, screen_name: str, include_wip: bool = True
+    session: requests.Session,
+    team: str,
+    screen_name: str,
+    include_wip: bool = True,
+    responses_dir: Path = RESPONCE_ROOT,
 ) -> List[Dict]:
+    responses_dir.mkdir(parents=True, exist_ok=True)
     base_url = f"https://api.esa.io/v1/teams/{team}/posts"
     queries = [f"user:{screen_name}"]
     if include_wip:
@@ -61,13 +67,16 @@ def fetch_posts(
     posts: List[Dict] = []
     seen_ids = set()
 
-    for q in queries:
+    for idx, q in enumerate(queries, start=1):
         page = 1
         while True:
             params = {"q": q, "page": page, "per_page": 100}
             resp = session.get(base_url, params=params, timeout=30)
             resp.raise_for_status()
             payload = resp.json()
+            (responses_dir / f"esa_page_{idx}_{page}.json").write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
             for post in payload.get("posts", []):
                 if post["number"] in seen_ids:
                     continue
@@ -76,15 +85,29 @@ def fetch_posts(
             next_page = payload.get("next_page")
             if not next_page:
                 break
-            json.dump(
-                payload,
-                open(f"responce/esa_page_{page}.json", "w"),
-                indent=2,
-                ensure_ascii=False,
-            )
             page = next_page
             time.sleep(8)
 
+    return posts
+
+
+def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]:
+    posts: List[Dict] = []
+    seen_ids = set()
+    if not responses_dir.exists():
+        return posts
+
+    for path in sorted(responses_dir.glob("esa_page_*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        for post in payload.get("posts", []):
+            number = post.get("number")
+            if number in seen_ids:
+                continue
+            seen_ids.add(number)
+            posts.append(post)
     return posts
 
 
@@ -208,6 +231,12 @@ def main() -> None:
         help="destination root for downloaded images",
     )
     parser.add_argument(
+        "--responses-dir",
+        type=Path,
+        default=RESPONCE_ROOT,
+        help="directory to store raw API responses",
+    )
+    parser.add_argument(
         "--env-file",
         type=Path,
         default=Path(".env"),
@@ -222,9 +251,14 @@ def main() -> None:
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {token}"})
 
-    posts = fetch_posts(
-        session, args.team, args.screen_name, include_wip=not args.no_wip
+    fetch_posts(
+        session,
+        args.team,
+        args.screen_name,
+        include_wip=not args.no_wip,
+        responses_dir=args.responses_dir,
     )
+    posts = load_posts_from_responses(args.responses_dir)
     if not posts:
         print("No posts found for the specified user.")
         return
