@@ -1,19 +1,18 @@
-#!/usr/bin/env python3
-import argparse
+import json
 import os
 import re
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
-import time
+
 import requests
-import json
 
 DEFAULT_TEAM = "vdslab"
 DEFAULT_USER = "ito_hal"
-POSTS_ROOT = Path(__file__).parent / "posts"
-IMAGES_ROOT = Path(__file__).parent / "images"
-RESPONCE_ROOT = Path(__file__).parent / "responce"
+POSTS_ROOT = Path(__file__).resolve().parent.parent / "posts"
+IMAGES_ROOT = Path(__file__).resolve().parent.parent / "images"
+RESPONCE_ROOT = Path(__file__).resolve().parent.parent / "responce"
 TOKEN_ENV_NAMES = ("ESA_ACCESS_TOKEN", "ESA_TOKEN", "ESA_API_TOKEN")
 
 
@@ -43,7 +42,6 @@ def load_token(env_path: Path) -> str:
                 if key.strip() in TOKEN_ENV_NAMES and val.strip():
                     return val.strip()
             else:
-                # Fallback: treat a single-line .env that only contains the token.
                 return line
 
     raise RuntimeError(
@@ -57,15 +55,12 @@ def fetch_posts(
     screen_name: str,
     include_wip: bool = True,
     responses_dir: Path = RESPONCE_ROOT,
-) -> List[Dict]:
+) -> None:
     responses_dir.mkdir(parents=True, exist_ok=True)
     base_url = f"https://api.esa.io/v1/teams/{team}/posts"
     queries = [f"user:{screen_name}"]
     if include_wip:
         queries.append(f"wip:true user:{screen_name}")
-
-    posts: List[Dict] = []
-    seen_ids = set()
 
     for idx, q in enumerate(queries, start=1):
         page = 1
@@ -77,18 +72,11 @@ def fetch_posts(
             (responses_dir / f"esa_page_{idx}_{page}.json").write_text(
                 json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
             )
-            for post in payload.get("posts", []):
-                if post["number"] in seen_ids:
-                    continue
-                seen_ids.add(post["number"])
-                posts.append(post)
             next_page = payload.get("next_page")
             if not next_page:
                 break
             page = next_page
             time.sleep(8)
-
-    return posts
 
 
 def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]:
@@ -119,10 +107,8 @@ def ensure_post_path(
     target_dir.mkdir(parents=True, exist_ok=True)
 
     base_name = sanitize_filename(title) or f"post-{number}"
-    candidate = target_dir / f"{base_name}.md"
-    if candidate.exists():
-        candidate = target_dir / f"{base_name}-p{number}.md"
-    return candidate
+    filename = f"{number}_{base_name}.md"
+    return target_dir / filename
 
 
 def download_image(
@@ -203,90 +189,3 @@ def format_post(post: Dict, body_md: str) -> str:
         "",
     ]
     return "\n".join(header) + body_md.strip() + "\n"
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Export esa posts for a specific user."
-    )
-    parser.add_argument(
-        "--team", default=os.getenv("ESA_TEAM", DEFAULT_TEAM), help="esa team name"
-    )
-    parser.add_argument(
-        "--user",
-        dest="screen_name",
-        default=os.getenv("ESA_SCREEN_NAME", DEFAULT_USER),
-        help="esa screen name",
-    )
-    parser.add_argument(
-        "--posts-dir",
-        type=Path,
-        default=POSTS_ROOT,
-        help="destination root for markdown posts",
-    )
-    parser.add_argument(
-        "--images-dir",
-        type=Path,
-        default=IMAGES_ROOT,
-        help="destination root for downloaded images",
-    )
-    parser.add_argument(
-        "--responses-dir",
-        type=Path,
-        default=RESPONCE_ROOT,
-        help="directory to store raw API responses",
-    )
-    parser.add_argument(
-        "--env-file",
-        type=Path,
-        default=Path(".env"),
-        help="path to .env containing the access token",
-    )
-    parser.add_argument(
-        "--no-wip", action="store_true", help="exclude draft (wip) posts"
-    )
-    args = parser.parse_args()
-
-    token = load_token(args.env_file)
-    session = requests.Session()
-    session.headers.update({"Authorization": f"Bearer {token}"})
-
-    fetch_posts(
-        session,
-        args.team,
-        args.screen_name,
-        include_wip=not args.no_wip,
-        responses_dir=args.responses_dir,
-    )
-    posts = load_posts_from_responses(args.responses_dir)
-    if not posts:
-        print("No posts found for the specified user.")
-        return
-
-    cache: Dict[str, Path] = {}
-    used_names: Dict[str, Path] = {}
-
-    for post in posts:
-        post_path = ensure_post_path(
-            args.posts_dir,
-            post.get("category"),
-            post.get("name", ""),
-            post.get("number"),
-        )
-        rewritten_body = rewrite_images(
-            session=session,
-            body_md=post.get("body_md", ""),
-            images_root=args.images_dir,
-            post_path=post_path,
-            post_number=post.get("number"),
-            cache=cache,
-            used_names=used_names,
-        )
-        content = format_post(post, rewritten_body)
-        post_path.parent.mkdir(parents=True, exist_ok=True)
-        post_path.write_text(content, encoding="utf-8")
-        print(f"Wrote {post_path}")
-
-
-if __name__ == "__main__":
-    main()
