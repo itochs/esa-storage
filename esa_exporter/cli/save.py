@@ -13,6 +13,7 @@ from esa_exporter.core import (
     rewrite_images,
     load_posts_from_responses,
     load_token,
+    load_local_index,
 )
 
 
@@ -26,19 +27,29 @@ def run(args: argparse.Namespace) -> None:
         print("No posts found in responses directory.")
         return
 
+    local_index = load_local_index(args.posts_dir)
+
     cache: Dict[str, Path] = {}
     used_names: Dict[str, Path] = {}
+    changed = 0
 
     for post in posts:
+        number = post.get("number")
+        updated_remote = (post.get("updated_at") or "").strip()
+
+        if (
+            number is not None
+            and number in local_index
+            and local_index[number] == updated_remote
+        ):
+            continue
+
         post_path = ensure_post_path(
             args.posts_dir,
             post.get("category"),
             post.get("name", ""),
-            post.get("number"),
+            number,
         )
-        if post_path.exists():
-            print(f"Skip existing: {post_path}")
-            continue
         rewritten_body = rewrite_images(
             session=session,
             body_md=post.get("body_md", ""),
@@ -52,6 +63,11 @@ def run(args: argparse.Namespace) -> None:
         post_path.parent.mkdir(parents=True, exist_ok=True)
         post_path.write_text(content, encoding="utf-8")
         print(f"Wrote {post_path}")
+        changed += 1
+
+    print(
+        f"Exported {changed} updated/new posts; skipped {len(posts) - changed} unchanged."
+    )
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:

@@ -26,8 +26,8 @@ esaにある自分の記事をまとめる
      # uv を使う場合: uv run -m esa_exporter.cli save
      ```
 
-     - Markdown は `posts/<カテゴリ>/number_title.md`、画像は `images/` に保存し、Markdown 内リンクをローカル参照に書き換えます。
-     - すでに同じファイル名があるものはスキップします（「まだ追加されていない記事」だけ保存）。
+     - Markdown は `posts/<カテゴリ>/<タイトル>.md`、画像は `images/` に保存し、Markdown 内リンクをローカル参照に書き換えます。
+     - すでにローカルに同じ `number` かつ同じ `updated_at` がある記事はスキップ（差分のみ保存）。
    - 保存先を変えたい場合は `--posts-dir` / `--images-dir` / `--responses-dir` を指定してください。
 
 構成

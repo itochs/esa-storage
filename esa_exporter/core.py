@@ -102,12 +102,13 @@ def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]
 def ensure_post_path(
     posts_root: Path, category: Optional[str], title: str, number: int
 ) -> Path:
+    """Return a stable path for the post. If it exists, we overwrite."""
     parts = [p for p in (category or "").split("/") if p]
     target_dir = posts_root.joinpath(*parts)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     base_name = sanitize_filename(title) or f"post-{number}"
-    filename = f"{number}_{base_name}.md"
+    filename = f"{base_name}.md"
     return target_dir / filename
 
 
@@ -189,3 +190,30 @@ def format_post(post: Dict, body_md: str) -> str:
         "",
     ]
     return "\n".join(header) + body_md.strip() + "\n"
+
+
+def load_local_index(posts_root: Path) -> Dict[int, str]:
+    """
+    Build a mapping of post number -> updated_at from existing markdown files.
+    Only entries with both fields are recorded.
+    """
+    index: Dict[int, str] = {}
+    if not posts_root.exists():
+        return index
+
+    for path in posts_root.rglob("*.md"):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+
+        m_num = re.search(r"^number:\s*(\d+)\s*$", text, re.MULTILINE)
+        m_updated = re.search(r"^updated_at:\s*([^\n]+)\s*$", text, re.MULTILINE)
+        if not (m_num and m_updated):
+            continue
+
+        num = int(m_num.group(1))
+        updated = m_updated.group(1).strip()
+        index[num] = updated
+
+    return index
