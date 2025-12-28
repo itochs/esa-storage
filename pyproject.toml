@@ -5,7 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "requests>=2.32.5",
+    "esa-exporter",
 ]
-[project.scripts]
-esa-exporter = "esa_exporter.cli.__main__:main"
+
+[tool.uv.workspace]
+members = [
+    "esa_exporter",
+]
+
+[tool.uv.sources]
+esa-exporter = { workspace = true }
