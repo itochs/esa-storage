@@ -10,9 +10,12 @@ import requests
 
 DEFAULT_TEAM = "vdslab"
 DEFAULT_USER = "ito_hal"
-POSTS_ROOT = Path(__file__).resolve().parent.parent / "posts"
-IMAGES_ROOT = Path(__file__).resolve().parent.parent / "images"
-RESPONCE_ROOT = Path(__file__).resolve().parent.parent / "responce"
+# Default to the current working directory so CLI commands write next to where
+# they are executed instead of inside the installed package location.
+BASE_DIR = Path.cwd()
+POSTS_ROOT = BASE_DIR / "posts"
+IMAGES_ROOT = BASE_DIR / "images"
+RESPONCE_ROOT = BASE_DIR / "responce"
 LAST_SYNC_FILE = RESPONCE_ROOT / ".last_sync_date"
 TOKEN_ENV_NAMES = ("ESA_ACCESS_TOKEN", "ESA_TOKEN", "ESA_API_TOKEN")
 
@@ -186,9 +189,13 @@ def rewrite_images(
     cache: Dict[str, Path],
     used_names: Dict[str, Path],
 ) -> str:
-    pattern = re.compile(r"!\[([^\]]*)\]\((\S+?)(?:\s+\"[^\"]*\")?\)")
+    md_pattern = re.compile(r"!\[([^\]]*)\]\((\S+?)(?:\s+\"[^\"]*\")?\)")
+    html_pattern = re.compile(
+        r"(<img\b[^>]*?\bsrc\s*=\s*)([\"'])(https?://[^\"']+)(\2)([^>]*>)",
+        re.IGNORECASE,
+    )
 
-    def replacer(match: re.Match) -> str:
+    def replacer_markdown(match: re.Match) -> str:
         alt_text, url = match.group(1), match.group(2)
         if not url.lower().startswith(("http://", "https://")):
             return match.group(0)
@@ -198,7 +205,16 @@ def rewrite_images(
         rel_path = os.path.relpath(local_path, start=post_path.parent)
         return f"![{alt_text}]({rel_path})"
 
-    return pattern.sub(replacer, body_md)
+    def replacer_html(match: re.Match) -> str:
+        prefix, quote, url, _, suffix = match.groups()
+        local_path = download_image(
+            session, url, images_root, post_number, cache, used_names
+        )
+        rel_path = os.path.relpath(local_path, start=post_path.parent)
+        return f"{prefix}{quote}{rel_path}{quote}{suffix}"
+
+    body_md = md_pattern.sub(replacer_markdown, body_md)
+    return html_pattern.sub(replacer_html, body_md)
 
 
 def format_post(post: Dict, body_md: str) -> str:
