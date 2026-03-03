@@ -141,5 +141,6 @@ vite.config.ts.timestamp-*
 responce/*.json
 posts/**/*.md
 images/*
+!images/.gitkeep
 __pycache__
 .last_sync_date
