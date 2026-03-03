@@ -83,7 +83,9 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "esa-exporter", editable = "esa_exporter" }]
+requires-dist = [
+    { name = "esa-exporter", editable = "esa_exporter" },
+]
 
 [[package]]
 name = "esa-exporter"
