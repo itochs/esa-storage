@@ -8,8 +8,6 @@ from urllib.parse import urlparse
 
 import requests
 
-DEFAULT_TEAM = "vdslab"
-DEFAULT_USER = "ito_hal"
 # Default to the current working directory so CLI commands write next to where
 # they are executed instead of inside the installed package location.
 BASE_DIR = Path.cwd()

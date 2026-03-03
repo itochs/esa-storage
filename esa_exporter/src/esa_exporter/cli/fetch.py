@@ -4,8 +4,6 @@ from pathlib import Path
 import requests
 
 from esa_exporter.core import (
-    DEFAULT_TEAM,
-    DEFAULT_USER,
     RESPONCE_ROOT,
     fetch_posts,
     load_posts_from_responses,
@@ -41,16 +39,14 @@ def run(args: argparse.Namespace) -> None:
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
-    parser = subparsers.add_parser(
+    parser: argparse.ArgumentParser = subparsers.add_parser(
         "fetch", help="Fetch posts and store raw API responses"
     )
-    parser.add_argument(
-        "--team", default=DEFAULT_TEAM, help="esa team name (default: vdslab)"
-    )
+    parser.add_argument("--team", required=True, help="esa team name (default: vdslab)")
     parser.add_argument(
         "--user",
         dest="screen_name",
-        default=DEFAULT_USER,
+        required=True,
         help="esa screen name (default: ito_hal)",
     )
     parser.add_argument(

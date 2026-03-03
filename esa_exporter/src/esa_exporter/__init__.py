@@ -1,6 +1,4 @@
 from .core import (
-    DEFAULT_TEAM,
-    DEFAULT_USER,
     POSTS_ROOT,
     IMAGES_ROOT,
     RESPONCE_ROOT,
