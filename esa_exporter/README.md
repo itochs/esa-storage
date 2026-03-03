@@ -8,11 +8,11 @@
 - `uv`
 - esa のアクセストークン
 
-このリポジトリでは workspace 構成のため、ルートで `uv sync` すると利用できます。
+このリポジトリは workspace 構成です。ルートで `uv sync` を実行すると利用できます。
 
 ## トークン設定
 
-次の優先順でトークンを読み込みます。
+トークンは次の優先順で読み込みます。
 
 1. 環境変数 `ESA_ACCESS_TOKEN`
 2. 環境変数 `ESA_TOKEN`
@@ -29,19 +29,18 @@ ESA_ACCESS_TOKEN=xxxxxxxx
 xxxxxxxx
 ```
 
-## 最小手順
+## クイックスタート
 
 ```bash
 uv sync
-uv run esa-exporter fetch --team <team-name> --user <screen-name>
-uv run esa-exporter save
+uv run esa-exporter pull --team <team-name> --user <screen-name>
 ```
 
 ## コマンド
 
 ### `fetch`
 
-esa API から記事一覧を取得し、raw JSON を保存します。
+esa API から記事一覧を取得し、レスポンス JSON を保存します。
 
 ```bash
 uv run esa-exporter fetch --team <team-name> --user <screen-name>
@@ -53,7 +52,7 @@ uv run esa-exporter fetch --team <team-name> --user <screen-name>
 - `--user`
 - `--responses-dir` (default: `responce`)
 - `--env-file` (default: `.env`)
-- `--no-wip` 下書き投稿を除外
+- `--no-wip` 下書き（WIP）投稿を除外
 
 差分取得:
 
@@ -75,6 +74,29 @@ uv run esa-exporter save
 - `--responses-dir` (default: `responce`)
 - `--env-file` (default: `.env`)
 
+### `pull`
+
+`fetch` と `save` を連続で実行します。
+
+```bash
+uv run esa-exporter pull --team <team-name> --user <screen-name>
+```
+
+主なオプション:
+
+- `--team`
+- `--user`
+- `--responses-dir` (default: `responce`)
+- `--posts-dir` (default: `posts`)
+- `--images-dir` (default: `images`)
+- `--env-file` (default: `.env`)
+- `--no-wip` 下書き（WIP）投稿を除外
+
+実行時の挙動:
+
+- 初回（`<responses-dir>/.last_sync_date` がない）: `fetch` は更新日フィルタなしで取得し、続けて `save` で Markdown/画像を出力します。
+- 2回目以降（`<responses-dir>/.last_sync_date` がある）: `fetch` は `updated:>=YYYY-MM-DD` の条件で差分取得し、続けて `save` で更新分のみ反映します。
+
 出力仕様:
 
 - 記事: `<posts-dir>/<category>/<number>_<sanitized-title>.md`  
@@ -86,16 +108,15 @@ uv run esa-exporter save
 ## 実行例
 
 ```bash
-# 1) JSON取得（wip込み）
-uv run esa-exporter fetch --team my-team --user my-user
-
-# 2) Markdownと画像を書き出し
-uv run esa-exporter save
+# JSON 取得から Markdown / 画像保存まで
+uv run esa-exporter pull --team my-team --user my-user
 ```
 
 ```bash
 # 出力先をカスタマイズ
-uv run esa-exporter save \
+uv run esa-exporter pull \
+  --team my-team \
+  --user my-user \
   --posts-dir ./backup/posts \
   --images-dir ./backup/images \
   --responses-dir ./backup/responce
