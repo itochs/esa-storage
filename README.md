@@ -1,37 +1,63 @@
 # esa
 
-esaにある自分の記事をまとめる
+esa の記事をローカルにエクスポートするためのワークスペースです。
 
-## 使い方
+## クイックスタート
 
-1. esa のアクセストークンを `.env` に保存します。
-   - 推奨: `ESA_ACCESS_TOKEN=xxxxxxxx` という形式で書く。
-   - `.env` にトークンだけ 1 行で書いてある場合でも読み取ります。
-2. 依存インストール（requests を使います）。`python -m pip install requests`
-3. 使い方（ライブラリ + CLI）
-   - 取得: raw JSON を `responce/` に保存
+1. `.env` を作成してトークンを設定します。
 
-     ```bash
-     python -m esa_exporter.cli fetch --team vdslab --user ito_hal
-     # or after installing: esa-exporter fetch --team vdslab --user ito_hal
-     # uv を使う場合: uv run -m esa_exporter.cli fetch --team vdslab --user ito_hal
-     ```
+   ```dotenv
+   ESA_ACCESS_TOKEN=xxxxxxxx
+   ```
 
-     - 下書き（wip）も含めます。除外したいときは `--no-wip`。
-     - `responce/.last_sync_date` があれば `updated:>=` クエリで差分取得し、最新の `updated_at` 日付を更新します。
-   - 保存: 未保存の記事だけ Markdown と画像を出力
+2. 依存関係をインストールします。
 
-     ```bash
-     python -m esa_exporter.cli save
-     # or: esa-exporter save
-     # uv を使う場合: uv run -m esa_exporter.cli save
-     ```
+   ```bash
+   uv sync
+   ```
 
-     - Markdown は `posts/<カテゴリ>/<number>_<タイトル>.md`、画像は `images/` に保存し、Markdown 内リンクをローカル参照に書き換えます。
-     - すでにローカルに同じ `number` かつ同じ `updated_at` がある記事はスキップ（差分のみ保存）。
-   - 保存先を変えたい場合は `--posts-dir` / `--images-dir` / `--responses-dir` を指定してください。
+3. 投稿データを取得して保存します。
 
-構成
+   ```bash
+   uv run esa-exporter fetch --team <team-name> --user <user-name>
+   uv run esa-exporter save
+   ```
 
-- `esa_exporter/core.py`: 共有ロジック（API コール、保存処理など）。
-- `esa_exporter/cli/`: CLI 実装（`fetch` / `save` サブコマンド）。`python -m esa_exporter.cli ...` で呼び出し。
+## よく使う実行パターン
+
+初回: 取得して保存
+
+```bash
+uv run esa-exporter fetch --team <team-name> --user <user-name>
+uv run esa-exporter save
+```
+
+2回目以降: 差分取得して保存（`.last_sync_date` を利用）
+
+```bash
+uv run esa-exporter fetch --team <team-name> --user <user-name>
+uv run esa-exporter save
+```
+
+下書き（wip）を除外して取得
+
+```bash
+uv run esa-exporter fetch --team <team-name> --user <user-name> --no-wip
+```
+
+出力先を変更
+
+```bash
+uv run esa-exporter save \
+  --posts-dir ./my_posts \
+  --images-dir ./my_images \
+  --responses-dir ./my_responses
+```
+
+## 補足
+
+- `fetch` は `responce/` に `esa_page_*.json` を保存します。
+- `responce/.last_sync_date` がある場合、`updated:>=<date>` で差分取得します。
+- `save` は `posts/<category>/<number>_<title>.md` と `images/` を出力します。
+- ローカルに同じ `number` かつ同じ `updated_at` の記事はスキップします。
+- パッケージ詳細と全オプションは [`esa_exporter/README.md`](esa_exporter/README.md) を参照してください。
