@@ -1,0 +1,20 @@
+services:
+  dev:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    working_dir: /workspace
+    env_file:
+      - .env
+    volumes:
+      - .:/workspace
+      - uv-cache:/home/dev/.cache/uv
+    stdin_open: true
+    tty: true
+    init: true
+    command: bash -lc "uv sync && sleep infinity"
+
+volumes:
+  uv-cache:

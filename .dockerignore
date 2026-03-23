@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+dist/
+posts/
+images/
+responses/
