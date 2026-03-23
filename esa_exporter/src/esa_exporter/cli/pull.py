@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from esa_exporter.core import IMAGES_ROOT, POSTS_ROOT, RESPONCE_ROOT
+from esa_exporter.core import IMAGE_ROOT, POST_ROOT, RESPONSE_ROOT
 
 from .fetch import run as run_fetch
 from .save import run as run_save
@@ -26,19 +26,19 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--responses-dir",
         type=Path,
-        default=RESPONCE_ROOT,
+        default=RESPONSE_ROOT,
         help="directory to store/read raw API responses",
     )
     parser.add_argument(
         "--posts-dir",
         type=Path,
-        default=POSTS_ROOT,
+        default=POST_ROOT,
         help="destination root for markdown posts",
     )
     parser.add_argument(
         "--images-dir",
         type=Path,
-        default=IMAGES_ROOT,
+        default=IMAGE_ROOT,
         help="destination root for downloaded images",
     )
     parser.add_argument(

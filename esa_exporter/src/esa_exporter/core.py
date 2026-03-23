@@ -11,10 +11,10 @@ import requests
 # Default to the current working directory so CLI commands write next to where
 # they are executed instead of inside the installed package location.
 BASE_DIR = Path.cwd()
-POSTS_ROOT = BASE_DIR / "posts"
-IMAGES_ROOT = BASE_DIR / "images"
-RESPONCE_ROOT = BASE_DIR / "responce"
-LAST_SYNC_FILE = RESPONCE_ROOT / ".last_sync_date"
+POST_ROOT = BASE_DIR / "posts"
+IMAGE_ROOT = BASE_DIR / "images"
+RESPONSE_ROOT = BASE_DIR / "responses"
+LAST_SYNC_FILE = RESPONSE_ROOT / ".last_sync_date"
 TOKEN_ENV_NAMES = ("ESA_ACCESS_TOKEN", "ESA_TOKEN", "ESA_API_TOKEN")
 
 
@@ -67,7 +67,7 @@ def fetch_posts(
     screen_name: str,
     include_wip: bool = True,
     updated_after: Optional[str] = None,
-    responses_dir: Path = RESPONCE_ROOT,
+    responses_dir: Path = RESPONSE_ROOT,
 ) -> List[Dict]:
     responses_dir.mkdir(parents=True, exist_ok=True)
     base_url = f"https://api.esa.io/v1/teams/{team}/posts"
@@ -100,7 +100,7 @@ def fetch_posts(
     return posts
 
 
-def load_posts_from_responses(responses_dir: Path = RESPONCE_ROOT) -> List[Dict]:
+def load_posts_from_responses(responses_dir: Path = RESPONSE_ROOT) -> List[Dict]:
     posts_by_number: Dict[int, Dict] = {}
     if not responses_dir.exists():
         return []

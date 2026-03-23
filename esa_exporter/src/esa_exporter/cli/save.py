@@ -5,9 +5,9 @@ from typing import Dict
 import requests
 
 from esa_exporter.core import (
-    POSTS_ROOT,
-    IMAGES_ROOT,
-    RESPONCE_ROOT,
+    POST_ROOT,
+    IMAGE_ROOT,
+    RESPONSE_ROOT,
     format_post,
     ensure_post_path,
     rewrite_images,
@@ -77,19 +77,19 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--posts-dir",
         type=Path,
-        default=POSTS_ROOT,
+        default=POST_ROOT,
         help="destination root for markdown posts",
     )
     parser.add_argument(
         "--images-dir",
         type=Path,
-        default=IMAGES_ROOT,
+        default=IMAGE_ROOT,
         help="destination root for downloaded images",
     )
     parser.add_argument(
         "--responses-dir",
         type=Path,
-        default=RESPONCE_ROOT,
+        default=RESPONSE_ROOT,
         help="directory to read raw API responses from",
     )
     parser.add_argument(

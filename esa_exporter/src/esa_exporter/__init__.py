@@ -1,7 +1,7 @@
 from .core import (
-    POSTS_ROOT,
-    IMAGES_ROOT,
-    RESPONCE_ROOT,
+    POST_ROOT,
+    IMAGE_ROOT,
+    RESPONSE_ROOT,
     sanitize_filename,
     load_token,
     fetch_posts,
@@ -13,9 +13,9 @@ from .core import (
 )
 
 __all__ = [
-    "POSTS_ROOT",
-    "IMAGES_ROOT",
-    "RESPONCE_ROOT",
+    "POST_ROOT",
+    "IMAGE_ROOT",
+    "RESPONSE_ROOT",
     "sanitize_filename",
     "load_token",
     "fetch_posts",

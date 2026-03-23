@@ -4,7 +4,7 @@ from pathlib import Path
 import requests
 
 from esa_exporter.core import (
-    RESPONCE_ROOT,
+    RESPONSE_ROOT,
     fetch_posts,
     load_posts_from_responses,
     load_token,
@@ -52,7 +52,7 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--responses-dir",
         type=Path,
-        default=RESPONCE_ROOT,
+        default=RESPONSE_ROOT,
         help="directory to store raw API responses",
     )
     parser.add_argument(

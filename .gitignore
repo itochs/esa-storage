@@ -138,8 +138,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-responce/*.json
+responses/*.json
+!responses/.gitkeep
 posts/**/*.md
+!posts/.gitkeep
 images/*
 !images/.gitkeep
 __pycache__
